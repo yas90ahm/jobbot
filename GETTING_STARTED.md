@@ -89,6 +89,27 @@ a paid ChatGPT plan (Plus or higher).
    **AI settings**, choose Ollama, type `llama3.1` as the model, click
    **Save and test** until it says Working.
 
+## D. "I have an API key for some LLM"
+
+Any provider works - OpenAI, Anthropic, Groq, OpenRouter, DeepSeek, Together,
+or anything else that speaks the standard OpenAI-style API.
+
+1. Get the code running: do **steps 1-4 of Path C** above (install Python,
+   download the code, run setup.bat, start it).
+2. On the dashboard open **AI settings** and match your key:
+   - **OpenAI key** (starts with `sk-`): choose "OpenAI API", paste the key,
+     type a model name like `gpt-4o-mini`.
+   - **Anthropic key** (starts with `sk-ant-`): choose "Anthropic API", paste
+     the key, leave the model blank.
+   - **Anything else** (Groq, OpenRouter, DeepSeek, Together, a company
+     server...): choose "Custom OpenAI-compatible server", paste the key, put
+     the provider's base URL in "Server URL" (examples:
+     `https://openrouter.ai/api/v1`, `https://api.groq.com/openai/v1`,
+     `https://api.deepseek.com/v1`), and type the model name exactly as the
+     provider lists it.
+3. Click **Save and test** until it says **Working**. That's it - the key is
+   stored only on your computer.
+
 ---
 
 ## First use (everyone)
