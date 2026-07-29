@@ -1,0 +1,6 @@
+python-jobspy>=1.1.80
+playwright>=1.40
+pypdf>=4
+python-docx>=1
+pyyaml>=6
+requests>=2.31

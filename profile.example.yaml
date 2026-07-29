@@ -1,0 +1,47 @@
+# Profile Configuration Template
+# Copy this file to profile.yaml and fill in your details.
+# All fields are required unless marked [optional].
+
+# Your full name
+name: Jane Doe
+
+# Email address for job applications
+email: jane.doe@example.com
+
+# Phone number (with country code preferred)
+phone: +1 (555) 123-4567
+
+# Current location or preferred work location
+location: San Francisco, CA
+
+# LinkedIn profile URL [optional]
+linkedin: https://linkedin.com/in/janedoe
+
+# GitHub profile URL [optional]
+github: https://github.com/janedoe
+
+# Personal website or portfolio [optional]
+website: https://janedoe.com
+
+# Work authorization status (e.g., "US Citizen", "Green Card", "Visa Sponsorship Required")
+work_authorization: US Citizen
+
+# Notice period required if employed (e.g., "2 weeks", "Immediate")
+notice_period: 2 weeks
+
+# Salary expectation in target currency (e.g., "$120k-150k", "100k EUR")
+salary_expectation: "$120k-150k"
+
+# List of key technical skills
+skills:
+  - Python
+  - JavaScript
+  - React
+  - PostgreSQL
+  - Docker
+  - AWS
+
+# Additional notes for applications (cover letter intro, etc.) [optional]
+extra_notes: |
+  Experienced full-stack engineer with 5+ years in distributed systems.
+  Interested in roles focusing on backend infrastructure and scalability.
