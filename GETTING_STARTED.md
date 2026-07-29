@@ -32,6 +32,17 @@ irm https://claude.ai/install.ps1 | iex
 Close and reopen the black window, then start at step 2. On a Mac:
 `curl -fsSL https://claude.ai/install.sh | bash`.)
 
+**"Claude won't open / won't work" checklist** - jobbot never needs a Claude
+window to open, only the `claude` command. Test it: open a **NEW** Command
+Prompt (new matters - old windows don't see fresh installs) and type
+`claude --version`.
+- Shows a version: you're fine. Type `claude` once, log in, exit, run jobbot.
+- "Not recognized": the Claude chat app from claude.ai/download does NOT
+  include the command. Run the PowerShell line above, then try again in
+  another new window.
+- Note: Claude Code needs a **paid** Claude plan. On a free account, skip it -
+  use **Ollama** (Path C step 5) instead; jobbot works exactly the same.
+
 ## B. "I use ChatGPT, not Claude"
 
 You'll use OpenAI's Codex CLI - the ChatGPT version of the same idea. It needs
