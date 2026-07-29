@@ -6,8 +6,10 @@ resume itself: titles, seniority, skills). It finds jobs, scores how well each f
 checks your resume for AI-cliche writing, researches each company, writes a
 tailored resume + cover letter per job, and fills out application forms for you.
 
-**New here? Read [HOW_TO_USE.md](HOW_TO_USE.md) - it walks through everything
-with no technical knowledge assumed.**
+**New here? [GETTING_STARTED.md](GETTING_STARTED.md) walks you from a blank
+computer to a running dashboard, literally step by step - including a path
+where Claude Code does the setup for you. Then [HOW_TO_USE.md](HOW_TO_USE.md)
+explains day-to-day use. No technical knowledge assumed in either.**
 
 ## Quick start (Windows)
 
