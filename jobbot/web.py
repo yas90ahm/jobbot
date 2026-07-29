@@ -229,6 +229,7 @@ def _start_analyze(fields, files):
     settings, err = _save_form(fields, files)
     if err:
         return err
+    PLAN_PATH.unlink(missing_ok=True)  # Analyze always means a FRESH analysis
     log = open("data/analyze.log", "w", encoding="utf-8")
     ANALYZE["proc"] = subprocess.Popen(
         [sys.executable, "-u", "-m", "jobbot", "analyze", "--resume", settings["resume"]],
@@ -280,6 +281,12 @@ searched; skills and industries feed the match scoring; contact info goes on app
   <input type="text" name="titles" value="{_esc(', '.join(p.get('titles', [])))}"></div></div>
 <div class="row"><div class="f-wide"><label>Your skills (used for match scoring)</label>
   <input type="text" name="skills" value="{_esc(', '.join(p.get('skills', [])))}"></div></div>
+<div class="row">
+  <div class="f-wide"><label>Areas of expertise (functional strengths, e.g. M&amp;A integration, vendor management)</label>
+  <input type="text" name="expertise" value="{_esc(', '.join(p.get('expertise', [])))}"></div>
+  <div class="f-wide"><label>Certifications (e.g. PMP, Lean Six Sigma)</label>
+  <input type="text" name="certifications" value="{_esc(', '.join(p.get('certifications', [])))}"></div>
+</div>
 <div class="row">
   <div class="f-wide"><label>Industries your experience fits</label>
   <input type="text" name="industries" value="{_esc(', '.join(p.get('industries', [])))}"></div>
@@ -390,7 +397,11 @@ def render(db_path="data/jobs.db"):
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="refresh" content="{refresh}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jobbot dashboard</title><style>{CSS}</style></head><body>
-<h1>jobbot</h1><div class="sub">{len(jobs)} jobs tracked &middot; refreshes every {refresh}s</div>
+<h1>jobbot</h1><div class="sub">{len(jobs)} jobs tracked &middot; refreshes every {refresh}s
+&middot; <a href="/export">export all to Excel</a>
+&middot; <form method="post" action="/reset" style="display:inline"
+    onsubmit="return confirm('Delete all found jobs, tailored letters, screenshots and logs? Your resume, profile, analysis and AI settings are kept.')">
+  <button class="btn-mini" type="submit">reset pipeline</button></form></div>
 {_run_card()}
 {_plan_card()}
 {_ai_card()}
@@ -408,16 +419,23 @@ match the role (0-100, scored by a recruiter-style review of your resume vs the 
 
 
 def _parse_multipart(content_type, body):
+    """Byte-exact multipart parse: strips only the protocol CRLFs around each
+    part, never bytes belonging to an uploaded binary file."""
     m = re.search(r"boundary=([^;]+)", content_type or "")
     if not m:
         return {}, {}
-    boundary = m.group(1).strip('"').encode("utf-8")
+    delim = b"--" + m.group(1).strip('"').encode("utf-8")
     fields, files = {}, {}
-    for part in body.split(b"--" + boundary):
-        part = part.strip(b"\r\n")
-        if not part or part == b"--":
+    for chunk in body.split(delim):
+        if chunk in (b"", b"--", b"--\r\n") or not chunk.strip():
             continue
-        head, _, data = part.partition(b"\r\n\r\n")
+        if chunk.startswith(b"\r\n"):
+            chunk = chunk[2:]
+        if chunk.endswith(b"\r\n"):  # the CRLF that precedes the next delimiter
+            chunk = chunk[:-2]
+        head, sep, data = chunk.partition(b"\r\n\r\n")
+        if not sep:
+            continue
         head_text = head.decode("utf-8", "replace")
         name = re.search(r'name="([^"]+)"', head_text)
         if not name:
@@ -467,6 +485,7 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(data)
 
@@ -478,6 +497,29 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
 
         def do_GET(self):
             parsed = urlparse(self.path)
+            if parsed.path == "/export":
+                import csv
+                import io
+                conn = db.connect(db_path)
+                jobs = db.list_jobs(conn)
+                conn.close()
+                buf = io.StringIO()
+                cols = ["title", "company", "location", "status", "score", "fit",
+                        "source", "posted", "url", "applied_at", "fit_notes",
+                        "notes", "tailor_dir", "id"]
+                w = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore")
+                w.writeheader()
+                for j in jobs:
+                    w.writerow(j)
+                data = buf.getvalue().encode("utf-8-sig")  # BOM so Excel gets the encoding right
+                self.send_response(200)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header("Content-Disposition", 'attachment; filename="jobbot_jobs.csv"')
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if parsed.path == "/file":
                 p = parse_qs(parsed.query).get("p", [""])[0]
                 full = Path(p).resolve()
@@ -490,6 +532,7 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
                 self.send_response(200)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(data)
                 return
@@ -499,6 +542,12 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
             if self.path == "/stop" and _running():
                 RUN["proc"].terminate()
+            elif self.path == "/reset" and not _running() and not _analyzing():
+                import shutil
+                for d in ("data/tailored", "data/screenshots", "data/research"):
+                    shutil.rmtree(d, ignore_errors=True)
+                for f in ("data/jobs.db", "data/run.log"):
+                    Path(f).unlink(missing_ok=True)
             elif self.path == "/analyze" and not _running() and not _analyzing():
                 fields, files = _parse_multipart(self.headers.get("Content-Type"), body)
                 err = _start_analyze(fields, files)
@@ -513,6 +562,8 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
                     p["titles"] = _split_csv(q.get("titles"))[:6]
                     p["skills"] = _split_csv(q.get("skills"))[:12]
                     p["industries"] = _split_csv(q.get("industries"))[:3]
+                    p["expertise"] = _split_csv(q.get("expertise"))[:8]
+                    p["certifications"] = _split_csv(q.get("certifications"))[:8]
                     if q.get("seniority") in ("junior", "mid", "senior"):
                         p["seniority"] = q["seniority"]
                     PLAN_PATH.write_text(json.dumps(p, indent=1), encoding="utf-8")

@@ -52,8 +52,11 @@ def cmd_hunt(args):
         return
     print(f"[hunt] searching each board for: {' | '.join(queries)}")
 
-    # richer keyword set for scoring: what we searched + resume skills/industries
-    score_kws = queries + (search_plan["skills"] + search_plan["industries"] if search_plan else [])
+    # richer keyword set for scoring: what we searched + resume skills/expertise/certs/industries
+    score_kws = queries
+    if search_plan:
+        score_kws = queries + search_plan["skills"] + search_plan["industries"] \
+            + search_plan.get("expertise", []) + search_plan.get("certifications", [])
     jobs = sources.fetch(queries, args.area, results=args.results, country=args.country)
     for j in jobs:
         j["score"] = score.score_job(j, resume_text, score_kws)

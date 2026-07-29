@@ -42,11 +42,20 @@ def load_resume(path: str) -> str:
         text = '\n'.join(para.text for para in doc.paragraphs)
 
     elif ext in ('.txt', '.md'):
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding='utf-8', errors='replace') as f:
             text = f.read()
 
+    elif ext == '.doc':
+        raise ValueError(
+            "Old Word .doc format is not supported - open it in Word and "
+            "Save As .docx (or .pdf), then upload that.")
+
     else:
-        raise ValueError(f"Unsupported resume format: {ext}")
+        raise ValueError(f"Unsupported resume format: {ext} - use .pdf, .docx, .txt, or .md")
 
     text = re.sub(r'\n\n\n+', '\n\n', text)
+    if len(text.strip()) < 150:
+        raise ValueError(
+            "Could not read text from this file - if it is a scanned/image PDF, "
+            "export a text version (.docx or a text-based PDF) and upload that.")
     return text

@@ -26,7 +26,10 @@ def search_plan(resume_text):
         "each 2-4 words exactly as employers post them], "
         '"seniority": "junior" or "mid" or "senior", '
         '"skills": [8 to 12 core skills from the resume], '
-        '"industries": [up to 3 industries their experience fits]}\n'
+        '"industries": [up to 3 industries their experience fits], '
+        '"expertise": [3 to 8 functional areas of expertise, e.g. "M&A integration", '
+        '"vendor management" - broader than single skills], '
+        '"certifications": [certifications actually named in the resume, e.g. "PMP"]}\n'
         "Return ONLY the JSON.\n\n" + resume_text)
     plan = {
         "key": key,
@@ -34,6 +37,8 @@ def search_plan(resume_text):
         "seniority": str(out.get("seniority", "mid")).lower(),
         "skills": [str(s) for s in out.get("skills", []) if s][:12],
         "industries": [str(i) for i in out.get("industries", []) if i][:3],
+        "expertise": [str(e) for e in out.get("expertise", []) if e][:8],
+        "certifications": [str(c) for c in out.get("certifications", []) if c][:8],
     }
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     CACHE.write_text(json.dumps(plan, indent=1), encoding="utf-8")
