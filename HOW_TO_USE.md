@@ -14,7 +14,16 @@ No technical knowledge needed. Total setup time: about 10 minutes, once.
 Double-click **`start_jobbot.bat`**. Your browser opens the dashboard.
 Keep the black window open while you use jobbot; close it to stop.
 
-## 3. Fill in the form and run
+## 3. Upload your resume and let the AI read it
+
+Upload your resume in the form and click **"Analyze resume first"**. After about
+a minute, a **"What the AI understood from your resume"** card appears: your
+contact info, the job titles it will search for, your seniority, skills, and
+industries. **Check it and fix anything wrong** (a missing phone number, a job
+title you don't want), then **Save corrections**. Every run from now on uses
+your corrected version. Redo this whenever you upload a new resume.
+
+## 4. Fill in the rest and run
 
 At the top of the dashboard:
 
@@ -34,7 +43,7 @@ The first thing jobbot does is check your resume for cliche, robotic writing
 the log tells you exactly which lines to fix and why. Fix them and run again -
 a resume that reads like a human wrote it gets more interviews, so don't skip this.
 
-## 4. While it runs
+## 5. While it runs
 
 The page refreshes itself. Watch the **Pipeline log**. A full run takes roughly
 10-20 minutes depending on how many jobs it tailors. What it's doing:
@@ -46,7 +55,7 @@ The page refreshes itself. Watch the **Pipeline log**. A full run takes roughly
 4. Writing a tailored resume and cover letter for the best-fitting jobs
 5. Filling out application forms (without submitting - it's a dry run)
 
-## 5. Read the results
+## 6. Read the results
 
 - **Tiles at the top** - how many jobs are at each stage. "applied" is your total.
 - **Needs your attention** - jobs it couldn't finish for you (LinkedIn-only
@@ -56,7 +65,7 @@ The page refreshes itself. Watch the **Pipeline log**. A full run takes roughly
 - **Pipeline table** - every job found, best matches first. Click **letter** /
   **resume** to read what it wrote; **screenshot** to see a filled form.
 
-## 6. Actually applying
+## 7. Actually applying
 
 Three ways, from safest to most automatic:
 
@@ -82,7 +91,7 @@ Three ways, from safest to most automatic:
 3. Applications you finish are counted in the "applied" tile, so you can watch
    the number grow over the week.
 
-## 7. If the AI part complains
+## 8. If the AI part complains
 
 If a run fails with a message about Claude/AI, open **AI settings** on the
 dashboard, pick what you have, and press **Save and test** until you see

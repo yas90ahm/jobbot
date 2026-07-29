@@ -90,6 +90,19 @@ def _slop_gate(resume_text, force):
     return True
 
 
+def cmd_analyze(args):
+    """Read the resume, derive the search plan + profile, print both for review."""
+    from jobbot import plan, tailor
+    resume_text = _load_resume(args.resume)
+    p = plan.search_plan(resume_text)
+    prof = tailor.ensure_profile(resume_text)
+    print(f"[analyze] contact: {prof.get('name')} | {prof.get('email')} | {prof.get('phone')}")
+    print(f"[analyze] will search for: {', '.join(p['titles'])} ({p['seniority']} level)")
+    print(f"[analyze] skills: {', '.join(p['skills'])}")
+    print(f"[analyze] industries: {', '.join(p['industries'])}")
+    print("[analyze] done - review and correct it on the dashboard, then Run")
+
+
 def cmd_match(args):
     from jobbot import match
     resume_text = _load_resume(args.resume)
@@ -225,6 +238,10 @@ def main():
     sp.add_argument("--resume", required=True)
     sp.add_argument("--llm", action="store_true", help="add an LLM reviewer pass")
     sp.set_defaults(fn=cmd_slopcheck)
+
+    sp = sub.add_parser("analyze", help="read the resume: derive searches, skills, contact info for review")
+    sp.add_argument("--resume", required=True)
+    sp.set_defaults(fn=cmd_analyze)
 
     sp = sub.add_parser("match", help="LLM fit score (0-100) for top unscored jobs")
     sp.add_argument("--resume", required=True)

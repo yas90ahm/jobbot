@@ -29,7 +29,10 @@ RUNLOG = Path("data/run.log")
 UPLOADS = Path("data/uploads")
 
 RUN = {"proc": None}
+ANALYZE = {"proc": None}
 LLM_TEST = {"ok": None, "msg": ""}
+PLAN_PATH = Path("data/search_plan.json")
+PROFILE_PATH = Path("profile.yaml")
 
 PROVIDERS = [
     ("claude-cli", "Claude Code CLI (default - free, uses your Claude login)"),
@@ -141,6 +144,31 @@ def _running():
     return RUN["proc"] is not None and RUN["proc"].poll() is None
 
 
+def _analyzing():
+    return ANALYZE["proc"] is not None and ANALYZE["proc"].poll() is None
+
+
+def _save_form(fields, files):
+    """Persist uploaded resume + form fields to settings. Returns (settings, error)."""
+    settings = _settings()
+    if "resume" in files:
+        UPLOADS.mkdir(parents=True, exist_ok=True)
+        safe = re.sub(r"[^\w.-]", "_", files["resume"][0]) or "resume"
+        path = UPLOADS / safe
+        path.write_bytes(files["resume"][1])
+        settings["resume"] = str(path)
+    for k in ("keywords", "area", "country", "results", "top", "mode"):
+        if k in fields:
+            settings[k] = fields[k]
+    settings["force"] = bool(fields.get("force"))
+    settings["research"] = "on" if fields.get("research") else "off"
+    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS.write_text(json.dumps(settings, indent=1), encoding="utf-8")
+    if not settings.get("resume") or not Path(settings["resume"]).exists():
+        return settings, "No resume: upload one first."
+    return settings, None
+
+
 def _run_card():
     s = _settings()
     if _running():
@@ -168,8 +196,12 @@ def _run_card():
   <div class="f-sm"><label>Jobs to tailor</label>
     <input type="number" name="top" min="1" max="20" value="{_esc(s.get('top') or 5)}"></div>
 </div>
-<div class="row"><div class="f-wide"><label>Resume (pdf / docx / md / txt) - {resume_note}</label>
-  <input type="file" name="resume" accept=".pdf,.docx,.md,.txt"></div></div>
+<div class="row">
+  <div class="f-wide"><label>Resume (pdf / docx / md / txt) - {resume_note}</label>
+  <input type="file" name="resume" accept=".pdf,.docx,.md,.txt"></div>
+  <button class="btn btn-stop" type="submit" formaction="/analyze" style="align-self:end"
+    title="Step 1: the AI reads your resume and shows what it understood, for you to correct">Analyze resume first</button>
+</div>
 <details><summary>Application details (optional - used on forms and cover letters)</summary>
 <div class="row">
   <div class="f-med"><label>Work authorization</label>
@@ -188,6 +220,61 @@ def _run_card():
   <span class="radio radio-line"><input type="checkbox" name="research" {'checked' if s.get('research') != 'off' else ''}> research each company online</span>
   <span class="radio radio-line"><input type="checkbox" name="force" {'checked' if s.get('force') else ''}> skip resume quality check (normally required)</span>
   <button class="btn" type="submit">Run</button>
+</div>
+</form></div>"""
+
+
+def _start_analyze(fields, files):
+    settings, err = _save_form(fields, files)
+    if err:
+        return err
+    log = open("data/analyze.log", "w", encoding="utf-8")
+    ANALYZE["proc"] = subprocess.Popen(
+        [sys.executable, "-u", "-m", "jobbot", "analyze", "--resume", settings["resume"]],
+        stdout=log, stderr=subprocess.STDOUT)
+    return None
+
+
+def _split_csv(v):
+    return [x.strip() for x in (v or "").split(",") if x.strip()]
+
+
+def _plan_card():
+    import yaml
+    if _analyzing():
+        return ('<div class="card"><h2>Step 2 - Reading your resume...</h2>'
+                '<p class="note">This takes about a minute. The page refreshes itself.</p></div>')
+    if not PLAN_PATH.exists():
+        return ""
+    p = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
+    prof = {}
+    if PROFILE_PATH.exists():
+        prof = yaml.safe_load(PROFILE_PATH.read_text(encoding="utf-8")) or {}
+    sen_opts = "".join(f'<option value="{v}" {"selected" if p.get("seniority") == v else ""}>{v}</option>'
+                       for v in ("junior", "mid", "senior"))
+    return f"""<div class="card"><h2>Step 2 - What the AI understood from your resume</h2>
+<p class="note">Check this and fix anything wrong, then Save. The job titles are what gets
+searched; skills and industries feed the match scoring; contact info goes on application forms.</p>
+<form method="post" action="/plan">
+<div class="row">
+  <div class="f-med"><label>Name</label><input type="text" name="name" value="{_esc(prof.get('name'))}"></div>
+  <div class="f-med"><label>Email</label><input type="text" name="email" value="{_esc(prof.get('email'))}"></div>
+  <div class="f-med"><label>Phone</label><input type="text" name="phone" value="{_esc(prof.get('phone'))}"></div>
+  <div class="f-med"><label>Location</label><input type="text" name="location" value="{_esc(prof.get('location'))}"></div>
+</div>
+<div class="row">
+  <div class="f-med"><label>LinkedIn</label><input type="text" name="linkedin" value="{_esc(prof.get('linkedin'))}"></div>
+  <div class="f-med"><label>GitHub / portfolio</label><input type="text" name="github" value="{_esc(prof.get('github'))}"></div>
+  <div class="f-sm"><label>Seniority</label><select name="seniority">{sen_opts}</select></div>
+</div>
+<div class="row"><div class="f-wide"><label>Job titles to search for (comma-separated)</label>
+  <input type="text" name="titles" value="{_esc(', '.join(p.get('titles', [])))}"></div></div>
+<div class="row"><div class="f-wide"><label>Your skills (used for match scoring)</label>
+  <input type="text" name="skills" value="{_esc(', '.join(p.get('skills', [])))}"></div></div>
+<div class="row">
+  <div class="f-wide"><label>Industries your experience fits</label>
+  <input type="text" name="industries" value="{_esc(', '.join(p.get('industries', [])))}"></div>
+  <button class="btn" type="submit" style="align-self:end">Save corrections</button>
 </div>
 </form></div>"""
 
@@ -290,12 +377,13 @@ def render(db_path="data/jobs.db"):
     job_rows = "".join(_job_row(j) for j in top) or \
         '<tr><td colspan="7" class="empty">Nothing yet - fill in the form above and hit Run.</td></tr>'
 
-    refresh = 8 if _running() else 30
+    refresh = 8 if (_running() or _analyzing()) else 30
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="refresh" content="{refresh}"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>jobbot dashboard</title><style>{CSS}</style></head><body>
 <h1>jobbot</h1><div class="sub">{len(jobs)} jobs tracked &middot; refreshes every {refresh}s</div>
 {_run_card()}
+{_plan_card()}
 {_ai_card()}
 {_log_card()}
 <div class="tiles">{tiles}</div>
@@ -335,28 +423,11 @@ def _parse_multipart(content_type, body):
 
 def _start_run(fields, files):
     """Returns an error string, or None on success."""
-    settings = _settings()
-    if "resume" in files:
-        UPLOADS.mkdir(parents=True, exist_ok=True)
-        safe = re.sub(r"[^\w.-]", "_", files["resume"][0]) or "resume"
-        path = UPLOADS / safe
-        path.write_bytes(files["resume"][1])
-        settings["resume"] = str(path)
-    if not settings.get("resume") or not Path(settings["resume"]).exists():
-        return "No resume: upload one before running."
-
-    for k in ("keywords", "area", "country", "results", "top", "mode"):
-        if fields.get(k):
-            settings[k] = fields[k]
-    settings["force"] = bool(fields.get("force"))
-    settings["research"] = "on" if fields.get("research") else "off"
-    settings["keywords"] = fields.get("keywords", settings.get("keywords", ""))
+    settings, err = _save_form(fields, files)
+    if err:
+        return err
     if not settings.get("area"):
         return "Area is required."
-    if not settings.get("keywords") and not settings.get("resume"):
-        return "Give me keywords, a resume, or both."
-    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-    SETTINGS.write_text(json.dumps(settings, indent=1), encoding="utf-8")
 
     OVERRIDES.write_text(json.dumps({
         k: fields.get(k, "") for k in
@@ -419,6 +490,31 @@ def serve(port=8737, db_path="data/jobs.db", open_browser=True):
             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
             if self.path == "/stop" and _running():
                 RUN["proc"].terminate()
+            elif self.path == "/analyze" and not _running() and not _analyzing():
+                fields, files = _parse_multipart(self.headers.get("Content-Type"), body)
+                err = _start_analyze(fields, files)
+                if err:
+                    return self._page(400, f"<p>{_esc(err)}</p><p><a href='/'>back</a></p>")
+            elif self.path == "/plan":
+                import yaml
+                q = {k: v[0].strip() for k, v in
+                     parse_qs(body.decode("utf-8", "replace")).items()}
+                if PLAN_PATH.exists():
+                    p = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
+                    p["titles"] = _split_csv(q.get("titles"))[:6]
+                    p["skills"] = _split_csv(q.get("skills"))[:12]
+                    p["industries"] = _split_csv(q.get("industries"))[:3]
+                    if q.get("seniority") in ("junior", "mid", "senior"):
+                        p["seniority"] = q["seniority"]
+                    PLAN_PATH.write_text(json.dumps(p, indent=1), encoding="utf-8")
+                prof = {}
+                if PROFILE_PATH.exists():
+                    prof = yaml.safe_load(PROFILE_PATH.read_text(encoding="utf-8")) or {}
+                for k in ("name", "email", "phone", "location", "linkedin", "github"):
+                    if k in q:
+                        prof[k] = q[k]
+                PROFILE_PATH.write_text(
+                    yaml.safe_dump(prof, allow_unicode=True, sort_keys=False), encoding="utf-8")
             elif self.path == "/mark":
                 q = {k: v[0] for k, v in
                      parse_qs(body.decode("utf-8", "replace")).items()}
