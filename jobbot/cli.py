@@ -94,8 +94,12 @@ def cmd_analyze(args):
     """Read the resume, derive the search plan + profile, print both for review."""
     from jobbot import plan, tailor
     resume_text = _load_resume(args.resume)
-    p = plan.search_plan(resume_text)
-    prof = tailor.ensure_profile(resume_text)
+    try:
+        p = plan.search_plan(resume_text)
+        prof = tailor.ensure_profile(resume_text)
+    except Exception as e:
+        print(f"[analyze] FAILED: {e}")
+        return
     print(f"[analyze] contact: {prof.get('name')} | {prof.get('email')} | {prof.get('phone')}")
     print(f"[analyze] will search for: {', '.join(p['titles'])} ({p['seniority']} level)")
     print(f"[analyze] skills: {', '.join(p['skills'])}")

@@ -33,6 +33,7 @@ ANALYZE = {"proc": None}
 LLM_TEST = {"ok": None, "msg": ""}
 PLAN_PATH = Path("data/search_plan.json")
 PROFILE_PATH = Path("profile.yaml")
+ANALYZE_LOG = Path("data/analyze.log")
 
 PROVIDERS = [
     ("claude-cli", "Claude Code CLI (default - free, uses your Claude login)"),
@@ -245,6 +246,14 @@ def _plan_card():
         return ('<div class="card"><h2>Step 2 - Reading your resume...</h2>'
                 '<p class="note">This takes about a minute. The page refreshes itself.</p></div>')
     if not PLAN_PATH.exists():
+        if ANALYZE_LOG.exists():
+            tail = ANALYZE_LOG.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-6:]
+            return (f'<div class="card"><h2>Step 2 - Analysis did not finish</h2>'
+                    f'<p class="note">Most common cause: no AI is set up yet. Open '
+                    f'<b>AI settings</b> below, pick what you have, click "Save and test" '
+                    f'until it says Working, then click "Analyze resume first" again. '
+                    f'The exact reason:</p>'
+                    f'<pre class="log">{_esc(chr(10).join(tail))}</pre></div>')
         return ""
     p = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
     prof = {}

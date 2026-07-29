@@ -114,6 +114,9 @@ or anything else that speaks the standard OpenAI-style API.
 
 ## First use (everyone)
 
+0. **AI first**: if you came via Path B, C, or D, make sure **AI settings** on
+   the dashboard says **Working** before anything else - the Analyze step and
+   all resume work need it. (Path A people are already set.)
 1. On the dashboard, upload your resume and click **"Analyze resume first"**.
 2. A card appears showing what the AI understood: your contact info, the job
    titles it will search for, your skills. **Fix anything wrong** (missing
