@@ -35,17 +35,36 @@ def save_config(cfg: dict) -> None:
         json.dumps({k: cfg.get(k, "") for k in DEFAULTS}, indent=1), encoding="utf-8")
 
 
-def _claude_cli(prompt, system, model, timeout):
+def _find_claude():
+    """The claude command - on PATH, or in known install spots PATH may miss
+    (fresh native install, npm global, before a terminal restart)."""
     p = shutil.which("claude") or shutil.which("claude.cmd")
+    if p:
+        return p
+    home = Path.home()
+    candidates = [
+        home / ".local" / "bin" / "claude.exe",
+        home / ".local" / "bin" / "claude",
+        Path(os.environ.get("APPDATA", "")) / "npm" / "claude.cmd",
+    ]
+    for c in candidates:
+        if c.is_file():
+            return str(c)
+    return None
+
+
+def _claude_cli(prompt, system, model, timeout):
+    p = _find_claude()
     if not p:
         if os.environ.get("ANTHROPIC_API_KEY"):
             return _anthropic(prompt, system, model, timeout,
                               os.environ["ANTHROPIC_API_KEY"])
         raise RuntimeError(
-            "Claude Code is not set up on this computer. In the dashboard's "
-            "AI settings pick another option: Ollama (free local model) or "
-            "OpenAI/Anthropic with an API key. Or ask a technical friend to "
-            "install Claude Code (npm i -g @anthropic-ai/claude-code).")
+            "The 'claude' command is not installed on this computer (the Claude "
+            "desktop app alone is not enough). Easiest fix: open PowerShell and "
+            "paste: irm https://claude.ai/install.ps1 | iex  - then restart "
+            "jobbot. Or in the dashboard's AI settings pick another option: "
+            "Ollama (free local model) or an API key.")
     argv = [p, "-p", "--model", model or "claude-sonnet-5", "--output-format", "text"]
     if p.lower().endswith((".cmd", ".bat")):
         # CreateProcess cannot exec batch files directly on Windows.

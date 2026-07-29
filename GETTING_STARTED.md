@@ -21,10 +21,16 @@ Prompt and `python3` instead of `python`.
    in your browser, you're done. Claude is also jobbot's default AI, so
    everything works with no further setup.
 
-(Have a Claude subscription but never installed Claude Code? First install
-Node.js from https://nodejs.org - big green LTS button, Next through
-everything - then in the black window run `npm install -g @anthropic-ai/claude-code`,
-then start at step 2.)
+(Using the Claude Code **desktop app**, or typing `claude` says "not
+recognized"? The app alone is not enough - jobbot needs the `claude` command.
+Open **PowerShell** (Windows key, type `powershell`, Enter) and paste:
+
+```
+irm https://claude.ai/install.ps1 | iex
+```
+
+Close and reopen the black window, then start at step 2. On a Mac:
+`curl -fsSL https://claude.ai/install.sh | bash`.)
 
 ## B. "I use ChatGPT, not Claude"
 
